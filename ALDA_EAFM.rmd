@@ -1,0 +1,557 @@
+---
+title: "Youth Behaviors and the Development of Obesity"
+author: "Emily A. Finchum-Mason"
+date: "December 11, 2017"
+output:
+  html_document:
+    theme: readable
+  word_document: default
+subtitle: Applied Longitudinal Data Analysis Final Examination
+---
+
+---
+references:
+- id: ogden2015
+  title: Prevalence of obesity among adults and youth: United States, 2011–2014
+  author:
+  - family: Ogden
+    given: CL
+  container-title: National Center on Health Statistics Data Brief
+  volume: 219
+  type: article-journal
+  issued:
+    year: 2015
+    
+- id: chandra
+  title: ""
+  author:
+  - family: Bigdeal
+    given: O
+  - family: Bigdeal
+    given: P
+  container-title: "A chapter in the book of everything"
+  page: 50
+  type: chapter
+  issued:
+    year: 2009
+    
+    - id: Bigdeal2009
+  title: "Studies on everything"
+  author:
+  - family: Bigdeal
+    given: O
+  - family: Bigdeal
+    given: P
+  container-title: "A chapter in the book of everything"
+  page: 50
+  type: chapter
+  issued:
+    year: 2009
+---
+
+<style type="text/css">
+h1, h2, h3, h4, h5, h6 {
+    font-family: Times New Roman;
+    font-size: 18px;
+}
+body, td {
+    font-family: Times New Roman;
+    font-size: 14px;
+}
+code.r{
+    font-size: 12px;
+}
+</style>
+
+<div style="line-height: 2em;">
+
+```{r setup, warning=F, echo=F, error=F, message=F}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(pander)
+library(nlme)
+library(foreign)
+
+xd <- read.csv('BMI_data_final.csv', header=T)
+
+xd <- xd %>%
+  mutate(sex = ifelse(Gender=="Female",1,0)) %>%
+  arrange(ID)
+```
+
+## Introduction
+
+Obesity and the factors that contribute to it have long been of interest to researchers and policy-makers alike and for good reason; .  The deleterious consequences of obesity that are well known include increased risk of Type II diabetes, cardiovascular disease, disturbances to mental health (Center for Disease Control, 2017), and female fertility (Chandrasekaran et al., 2017).  Current research identifies differences in the prevalence of obesity based on personal traits like sex and race/ethnicity.  For instance, higher prevalence of obesity is observed in women relative to men and in black and Hispanic individuals relative to white and non-Hispanic Asian individuals (Ogden et al., 2015).  Stage in the life cycle may also be a driver of obesity, particularly New evidence also suggests that children whose families access public welfare services, specifically SNAP or WIC benefits, have higher values of sex-specific body mass index and that increase in BMI may be persistent over time (Pan et al., 2016).  
+
+There are also several behavioral attributes hypothesized to contribute to mass accumulation over time, including poor diet, lack of exercise, stressful interactions with the environment, and deficient sleep patterns (National Institutes of Health, 2017).  This paper seeks to examine the role of some of these behavior characteristics on the changes in obesity of youth and young adults over time.  I look specifically at the time that young adults spend in sedentary activities, such as television watching, and how the effects of being sedentary may be modulated by sleep time, and fast food consumption.  More formally, this project seeks to address the following research questions: _(1) How, if at all, does the time that young adults spend watching television affect their changes in body mass index over time, controlling for known personal characteristics?  And (2), are these effects robust even controlling for sleep time and fast food consumption?_
+
+Based on existing research on the etiology of obesity as well as its persistence over time, I hypothesize that children who spent more hours watching television in early youth will have higher body mass index values both initially and over time, controlling for race, sex, puberty status, and welfare status.  Further, I hypothesize that the effect of being sedentary will be robust even considering sleep time and fast food consumption, but that increases in BMI will be accelerated for individuals with low sleep time and high fast food consumption.  The latter hypothesis reflects the fact that the development of obesity over time can be attributed to a multitude of mutually reinforcing factors in a sort-of “perfect storm”.  
+
+## Methods
+
+**Data**
+
+To test these hypotheses, I use longitudinal data on the health and behavioral attributes of 3310 adolescents over a period of approximately 15 years.  Researchers obtained measurements from youth respondents over the course of four waves; this data represents only waves two through four.  The explanatory variables of interest to this analysis is respondent body mass index (BMI) at a given point of measurement.  The time variable used in this analysis the the respondent’s age at first wave minus 11 years ( _Question 1_), a decision that derives from the fact that each individual respondent is interviewed at different intervals of time and age is a variable that, in and of itself, informs our understanding of changes in BMI.  Thus, the interpretation of the start point in this study is the point at which the respondent enters young adulthood and each subsequent age measurement represents the number of years that have passed between measurements.  
+
+**Taxonomy of Models**
+
+In order to obtain the model with the most explanatory power and the best fit, this analysis builds a taxonomy of models, starting with the unconditional means and unconditional growth models. The unconditional means model gives us a sense of the variability at the intrasubject level ($\varepsilon_{ij}$) as well as the intersubject level ($\zeta_{0i}$).
+
+_Unconditional Means Model_
+
+$$
+\begin{aligned}
+BMI_{ij} = \gamma_{00}+\zeta_{0i}+\varepsilon_{ij}
+\end{aligned}
+$$
+
+where
+
+$$
+\begin{aligned}
+\zeta_{0i} \sim^{iid} N(0,\sigma_{0}^2) \\
+\varepsilon_{ij} \sim^{iid} N(0,\sigma_{\epsilon}^2)
+\end{aligned}
+$$
+
+The unconditional growth model gives insight into the average initial BMI value (as per the previous model), the average change in BMI over time of the population, the variability in each person's value from the average starting value and rate of change, and also the intraperson variability over time. 
+
+_Unconditional Growth Model_
+
+$$
+\begin{aligned}
+BMI_{ij} = \gamma_{00}+\gamma_{10}(cAge_{ij})+\zeta_{0i}+\zeta_{1i}(cAge_{ij})+\varepsilon_{ij}$
+\end{aligned}
+$$
+
+where
+
+$$
+\begin{aligned}
+\epsilon_{ij} \sim^{iid} N(0, \sigma_{\epsilon}^2)
+\end{aligned}
+$$
+
+$$\left[\begin{array}
+{rrr}
+\zeta_{0i} \\
+\zeta_{1i} \\
+\end{array}\right]
+\sim N\left(\left[\begin{array}
+{rrr}
+0 \\
+0 \\
+\end{array}\right], 
+\left[\begin{array}
+{rrr}
+\sigma^2_{0} & \sigma_{01} \\
+\sigma_{10} & \sigma^2_{1} \\
+\end{array}\right]\right)$$
+
+Subsequent models incorporate variables that previous studies have found important in understanding BMI and its change over time, including sex, race, welfare status, and stage in puberty.  ( _Question 3B_) This model assumes that the additional time-invariant explanatory variables, like race and gender, only impact the initial value of BMI, not the rate at which BMI is changing over time.  Because hours of TV watched is a continuous, time-varying indicator, the interpretation is not quite so straightforward. In this case, we assume that the TV time variable has the potential to discontinuous change in starting value of BMI at a particular interval (intercept), not the manner in which BMI is changing over the course of that interval (slope). This assumption may not be congruent with reality, in that the length of the intervals between measurements may be substantial and we might expect that the time a person spends sedentary would have a cumulative effect on the change in BMI. Ultimately, this is still a question that remains to be tested.  There is also an assumption that the covariates used to explain the response variable are not significantly correlated with one another; if we find that there are intercorrelations between any of these variables, our conclusions may be tenuous.
+
+Importantly, racial categories are treated as a series of dichotomous variables with the Asian category as the referent. Welfare status is a binary, time-varying covariate indicating whether or not the individual was receiving welfare benefits in a given wave.  And Puberty is an indicator that assumes a value of one if the subject is going through puberty and zero otherwise. 
+
+_Model A: Effect of TV Watching on BMI, controlling for Sex, Race, Welfare Status, and Stage of Puberty_ ( _Question 3A_)
+
+$$
+BMI_{ij}=\gamma_{00} + \gamma_{01}(TV_{ij}) + \gamma_{10}(cAge_{ij}) + \gamma_{20}(Sex_{i})+ \gamma_{30}(Black_{i}) + \gamma_{40}(Hispanic_{i}) + \gamma_{50}(NativeAmerican_{i}) + \gamma_{60}(White_{i}) + \\ \gamma_{70}(Welfare_{ij}) + \gamma{80}(Puberty_{ij}) + \zeta_{0i} + \zeta_{1i}(cAge_{ij}) + \varepsilon_{ij}
+$$
+where
+
+$$
+\begin{aligned}
+\epsilon_{ij} \sim^{iid} N(0, \sigma_{\epsilon}^2)
+\end{aligned}
+$$
+
+$$\left[\begin{array}
+{rrr}
+\zeta_{0i} \\
+\zeta_{1i} \\
+\end{array}\right]
+\sim N\left(\left[\begin{array}
+{rrr}
+0 \\
+0 \\
+\end{array}\right], 
+\left[\begin{array}
+{rrr}
+\sigma^2_{0} & \sigma_{01} \\
+\sigma_{10} & \sigma^2_{1} \\
+\end{array}\right]\right)$$
+
+Due to space considerations, I invoke other model specifications where they are germane to the analysis.  This project estimates random effects for only the intercept and rate of change due to age and, as such, the distributional assumptions remain the same for each subsequent model.  
+
+## Analysis
+
+**Exploring Trends in BMI over Time**
+
+( _Question 2_) I begin by exploring some trends BMI over time at the individual level, which is subdivided by the quartile of hours of television watched by the respondent per week. The graph below shows very subtle indications that those individuals in the 4th quartile of TV watching hours (ranging from 20 to 168 hours per week of viewing) have a wider variation in their ultimate BMI value as well as steeper slopes.  Those in the 1st quartile, by comparison, tend to exhibit flatter slopes and less variability in the final outcome.  However, the sheer saturation of respondents makes it more difficult to get a sense of trends in the middle of each of those distributions.
+
+```{r, warning=F, echo=F, error=F, message=F}
+
+xd <- xd %>%
+  mutate(quartile = ifelse(TV>=0 & TV<5, "1st Quartile", 
+                    ifelse(TV>=5 & TV<10, "2nd Quartile",
+                           ifelse(TV>=10 & TV<20, "3rd Quartile", "4th Quartile"))))
+
+ggplot(data=xd, aes(x=Age, y=BMI, group=ID, color=quartile))+
+  geom_line()+
+  ggtitle('Changes in BMI over time, by Weekly TV Watching Habits')+
+  facet_grid(~quartile)
+
+```
+
+
+Given that the size of this dataset is relatively large, it is easier to get a sense of trends based on random selection of individuals. This diagram features a random subsample of 100 individuals from the dataset.  We can see that the observed trends are not as definitive as the previous graph might lead us to believe.  In fact, this figure actually seems to indicate that the sampled individuals have lower rates of change of BMI, lower initial BMI values, and lower final BMI values.  
+
+```{r, warning=F, echo=F, error=F, message=F}
+set.seed(4999)
+
+sampled_subjects <- sample(unique(xd$ID), size = 100, replace=F)
+
+ggplot(data=xd %>%
+         filter(ID %in% sampled_subjects), aes(x=Age, y=BMI, group=ID, color=quartile))+
+  geom_line()+
+  ggtitle('Changes in BMI over time, by Weekly TV Watching Habits\nRandom Sample (N=100)')+
+  facet_wrap(~quartile)
+```
+
+
+One final way to uncover not only the general direction of the trend as well as its functional form is to sample even fewer individuals and observe individual level trends. The figure below features a random sample of 25 individuals, sampled based on their initial TV watching habits, and their specific BMI trajectories.  When approached this way, we can observe not the individual changes in TV watching behavior over time and how this might impact future BMI trends.  One trend that starts to become apparent based on this figure is that individuals who watch a lot of TV per week in their earlier years (i.e. who are in the 3rd or 4th quartile) throughout the first wave generally have a higher rate of increase of BMI in the later wave. Also, based on this plot, we can see that it does not strain credulity to use a linear trend to model this data.
+
+```{r, warning=F, echo=F, error=F, message=F}
+set.seed(2000)
+
+xd_q1 <- xd %>%
+  filter(quartile=='1st Quartile')
+xd_q2 <- xd %>%
+  filter(quartile=='2nd Quartile')
+xd_q3 <- xd %>%
+  filter(quartile=='3rd Quartile')
+xd_q4 <- xd %>%
+  filter(quartile=='4th Quartile')
+
+sampled_subjects_q1 <- sample(unique(xd_q1$ID), size = 5, replace=F)
+sampled_subjects_q2 <- sample(unique(xd_q2$ID), size = 5, replace=F)
+sampled_subjects_q3 <- sample(unique(xd_q3$ID), size = 5, replace=F)
+sampled_subjects_q4 <- sample(unique(xd_q4$ID), size = 5, replace=F)
+
+ggplot(data=xd %>%
+         filter(ID %in% sampled_subjects_q1 |ID %in% sampled_subjects_q2 |ID %in% sampled_subjects_q3 |ID %in% sampled_subjects_q4), 
+       aes(x=Age, y=BMI, group=ID, color=quartile))+
+  geom_point()+
+  geom_line()+
+  ggtitle('Changes in BMI over time, by Subject')+
+  facet_wrap( ~ ID, ncol=4)
+```
+
+
+**Unconditional Means & Unconditional Growth Models**
+
+```{r, warning=F, echo=F, error=F, message=F}
+
+#running a taxonomy of models
+#starting with unconditional means model
+library(MASS)
+
+umm <- lme(BMI~1, 
+           data=xd, 
+           random=~1|ID,
+           na.action = na.omit,
+           method="ML")
+#summary(umm)
+fixumm <- fixef(umm)
+varmod_umm <- VarCorr(umm)
+storage.mode(varmod_umm) <- 'numeric'
+
+#creating a centered age variable for ease of interpretation of the intercept.
+#summary(xd$Age)
+xd <- xd %>%
+  mutate(cAge = Age-11)
+
+#Unconditional growth model
+ugm <- lme(BMI~cAge, 
+           data=xd, 
+           random=~1+cAge|ID,
+           na.action = na.omit,
+           method="ML")
+#summary(ugm)
+fixugm <- fixef(ugm)
+varmod_ugm <- VarCorr(ugm)
+storage.mode(varmod_ugm) <- 'numeric'
+```
+
+
+While the full results of this model, including goodness-of-fit statistics are summarized in _Table 1_, it is worth noting that there is substantial variability between subjects in terms of initial BMI values ($\sigma_{0}^2$ = `r varmod_umm['(Intercept)', 'Variance']`).  There is also fairly high intrasubject, intertemporal variability in BMI values ($\sigma_{\epsilon}^2$ = `r varmod_umm['Residual', 'Variance']`), indicating that each individual subject is deviating substantially from his or her own mean as well.  Adding in the effect of time, we observe a notable decrease in the random intercept variance ($\sigma_{0}^2$ = `r varmod_ugm['(Intercept)', 'Variance']`) as well as a sizeable decrease in the intraperson variability in BMI over time ($\sigma_{\epsilon}^2$ = `r varmod_ugm['Residual', 'Variance']`).  The latter is an interesting finding, in that it indicates much of the intraperson variability is based on the passage of time.
+
+**Introducing Relevant Controls**
+
+```{r, warning=F, echo=F, error=F, message=F}
+mod_A <- lme(BMI~cAge+TV+sex+as.factor(Race)+Welfare+Puberty, 
+           data=xd, 
+           random=~1+cAge|ID,
+           na.action = na.omit,
+           method="ML")
+
+#summary(mod_A)
+
+fixed_modA <- fixef(mod_A)
+varmodA <- VarCorr(mod_A)
+storage.mode(varmodA) <- 'numeric'
+```
+
+Model A reveals that the hours spent watching TV have a positive, significant effect on BMI ($p<0.01$), however, the effect of an additional hour of television is qualitatively small even relative to the BMI scale. For example, the incremental increase on BMI for an Asian male who is not on welfare and not in puberty would have an increase of `r round(fixed_modA['TV'],3)` units on the BMI scale per one additional hour of television per day.  All racial categories are also positive and statistically significant at at least the $p<0.05$ level and these differences are generally qualitatively large relative to the BMI scale.  For example, all else held equal, average initial BMI values for Black youth are `r round(fixed_modA['as.factor(Race)Black'],3)` greater than the population value for Asian youth and average intial BMI values for Native youth are `r round(fixed_modA['as.factor(Race)NativeAm'],3)` greater than for Asian youth. These findings are consistent with the existing literature in both magnitude and direction of the differences.  Finally, youth that are in the midst of puberty have a negative, statistically significant ($p<0.01$) difference from the average initial population value of BMI, most likely due to the increased metabolic activity taking place during this critical development stage. Unsurprisingly, the effect of time is also positive and statistically signficant ($p<0.01$), as the unconditional growth model indicated, such that, all else being equal, each additional year tracks to an increase in BMI of `r round(fixed_modA['cAge'],3)`. Contrary to what was expected given the literature neither sex nor public assistance had a significant effect on BMI at the $p < 0.05$ level. In terms of model fit, both AIC and BIC values indicate that Model A is superior to the unconditional growth model, despite the obvious decrease in parsimony.
+
+These coefficients capture "snapshot" effects of each explanatory variable on BMI.  However, one might expect that each of these variables influences not only the starting value of BMI in a given interval, but also how an individual will fluctuate over time. In Model B, I interact each of these variables with time. ( _Question 4A_) Now, we can assume that the effect of additional hours spent watching TV will not only influence the initial values at the start of the interval, but also the growth rate of BMI.
+
+**Incorporating Interactions with Time**
+
+$$
+\begin{aligned}
+BMI_{ij}=\gamma_{00} + \gamma_{01}(TV_{ij}) + \gamma_{10}(cAge_{ij}) + \gamma_{11}(cAge_{ij})(TV_{ij}) + \gamma_{20}(Sex_{i})+ \gamma_{21}(Sex_{i})(cAge_{ij}) + \gamma_{30}(Black_{i}) + \gamma_{31}(Black_{i})(cAge_{ij}) + \gamma_{40}(Hispanic_{i}) +\gamma_{41}(Hispanic_{i})(cAge_{ij})\\ + \gamma_{50}(NativeAmerican_{i}) + \gamma_{51}(NativeAmerican_{i})(cAge_{ij}) + \gamma_{60}(White_{i}) + \gamma_{61}(White_{i})(cAge_{ij}) + \gamma_{70}(Welfare_{ij}) + \gamma{80}(Puberty_{ij}) + \zeta_{0i} + \zeta_{1i}(cAge_{ij}) + \varepsilon_{ij}
+\end{aligned}
+$$
+
+```{r, warning=F, echo=F, error=F, message=F}
+#Running fully interacted Model
+
+mod_B <- lme(BMI~cAge+TV+TV:cAge+sex+sex:cAge+as.factor(Race)+as.factor(Race):cAge+Welfare+Puberty, 
+           data=xd, 
+           random=~1+cAge|ID,
+           na.action = na.omit,
+           method="ML")
+#summary(mod_B)
+fixmodB <- fixef(mod_B)
+varmodB <- VarCorr(mod_B)
+storage.mode(varmodB) <- 'numeric'
+#pander(fixmodB)
+```
+
+When we incorporate the effects that each explanatory variable (exclusing welfare status and stage of puberty) has on the growth rate of BMI over time, a slightly different picture starts to emerge. For simplicity's sake, all of the following interpretations assume that the other explanatory variables are held equal. In this model, hours of TV watched does not have a statistically significant effect on the value that BMI takes at the start of the measurement wave, but there is some evidence to indicate that it does have a qualitatively small, positive effect on the change in BMI over time (the effect would translate to a `r round(fixmodB['TV'],3)` increase in BMI per year per hour of television watching daily, $p<0.1$).  This finding is not significant enough either statistically or in terms of its magnitude to yield any definitive statements about the explanatory power of TV watching on obesity, but it certainly invites further inquiry.  
+
+The most surprising of the differences between Model A and Model B was that sex now has a statistically significant effect on not only the initial value of BMI, but also the change in BMI over time.  Female youth had lower BMI at the outset of the study by approximately `r round(fixmodB['sex'],3)`, but the incremental addition to increase in BMI over time of approximately `r round(fixmodB['cAge:sex'],3)`. So, whereas a male youth could expect an average `r round(fixmodB['cAge'],3)` increase in BMI per year, female youth could expect an average `r round(fixmodB['cAge:sex'],3) + round(fixmodB['cAge'],3)` increase per year.  This is a somewhat intuitive finding, given what we know about the development of female metabolism versus male metabolism, particularly in light of higher testosterone release in males during sexual development.
+
+The effects of race on average initial BMI values remain statistically significant, as in Model A, but the effects of race on the change in BMI over time are only significant at the $p<0.05$ level for Black youth and Native American youth relative to Asian youth. While these are interesting effects to understand, the addition of these variables reflects on the goodness-of-fit statistics, particularly the BIC values. These values are significantly increased based on the additional complexity in the model. ( _Question 4B_) Using goodness of fit statistics as well as the significance of the existing interaction terms, I elected to try three different variations of Model B in order to adjudicate which terms were valuable and which simply added complexity without adding substantial explanatory power.  Descriptions of these models are provided below, but I only include the best fitting model in the final analysis and _Table 1_.  As _Table 1_ shows, the third model was the best fitting based on BIC statistics, but likelihood ratio tests also confirmed that this model was superior than the other models, including Model A, at the $p<0.01$ level. 
+
+_Model B1_ (Preferred by BIC)
+
+$$
+\begin{aligned}
+BMI_{ij}=\gamma_{00} + \gamma_{01}(TV_{ij}) +\gamma_{10}(cAge_{ij}) + \gamma_{20}(Sex_{i})+ \gamma_{21}(Sex_{i})(cAge_{ij}) + \gamma_{30}(Black_{i}) + \gamma_{40}(Hispanic_{i}) + \gamma_{50}(NativeAmerican_{i}) + \\ \gamma_{60}(White_{i}) +  \gamma_{70}(Welfare_{ij}) + \gamma_{80}(Puberty_{ij}) + \zeta_{0i} + \zeta_{1i}(cAge_{ij}) + \varepsilon_{ij}
+\end{aligned}
+$$
+
+_Model B2_ (Incorporates the TV/Age interaction in order to assess the research questions)
+
+$$
+\begin{aligned}
+BMI_{ij}=\gamma_{00} + \gamma_{01}(TV_{ij}) +\gamma_{10}(cAge_{ij}) + \gamma_{11}(TV_{ij})(cAge_{ij}) + \gamma_{20}(Sex_{i})+ \gamma_{21}(Sex_{i})(cAge_{ij}) + \gamma_{30}(Black_{i}) + \gamma_{40}(Hispanic_{i}) + \gamma_{50}(NativeAmerican_{i}) \\
++ \gamma_{60}(White_{i}) + \gamma_{70}(Welfare_{ij}) + \gamma_{80}(Puberty_{ij}) + \zeta_{0i} + \zeta_{1i}(cAge_{ij}) + \varepsilon_{ij}
+\end{aligned}
+$$
+
+**Model Selection Process**
+
+```{r, warning=F, echo=F, error=F, message=F}
+mod_B1 <- lme(BMI~cAge + TV + sex + sex:cAge + as.factor(Race) + Welfare + Puberty,
+           data=xd, 
+           random=~1+cAge|ID,
+           na.action = na.omit,
+           method="ML")
+#summary(mod_B1)
+fixmodB1 <- fixef(mod_B1)
+varmodB1 <- VarCorr(mod_B1)
+storage.mode(varmodB1) <- 'numeric'
+
+mod_B2 <- lme(BMI~cAge + TV + TV:cAge + sex + sex:cAge + as.factor(Race) + Welfare + Puberty,
+           data=xd, 
+           random=~1+cAge|ID,
+           na.action = na.omit,
+           method="ML")
+#summary(mod_B2)
+fixmodB2 <- fixef(mod_B2)
+varmodB2 <- VarCorr(mod_B2)
+storage.mode(varmodB2) <- 'numeric'
+```
+
+```{r, warning=F, echo=F, error=F, message=F}
+#adding in effects for other behavioral characteristics
+mod_C <- lme(BMI~cAge + TV + sex + sex:cAge + as.factor(Race) + Welfare + Puberty + FastFood + TST + Bedtime,
+           data=xd, 
+           random=~1+cAge|ID,
+           na.action = na.omit,
+           method="ML")
+#summary(mod_C)
+fixmodC<- fixef(mod_C)
+varmodC <- VarCorr(mod_C)
+storage.mode(varmodC) <- 'numeric'
+```
+
+_Table 1_, below, illustrates the sum the findings across models. 
+
+|**Estimated Parameters**| | |**Unconditional Means**| **Unconditional Growth**| **Model A**| **Model B1**| **Model B2** | **Model B**|**Model C**|
+|------------------------|-|-|-----------------------|-------------------------|------------|-------------|--------------|------------|-----------|
+| _Fixed Effects_ | Intercept| $\gamma_{00}$| `r round(fixumm['(Intercept)'],3)` |`r round(fixugm['(Intercept)'],3)` | `r round(fixed_modA['(Intercept)'],3)`| `r round(fixmodB1['(Intercept)'],3)`|`r round(fixmodB2['(Intercept)'],3)`|`r round(fixmodB['(Intercept)'],3)`|`r round(fixmodC['(Intercept)'],3)`|
+| | cAge | $\gamma_{10}$| |`r round(fixugm['cAge'],3)` |`r round(fixed_modA['cAge'],3)`| `r round(fixmodB1['cAge'],3)`|`r round(fixmodB2['cAge'],3)`|`r round(fixmodB['cAge'],3)`|
+| | TV | $\gamma_{01}$| | |`r round(fixed_modA['TV'],3)`|`r round(fixmodB1['TV'],3)`|`r round(fixmodB2['TV'],3)`|`r round(fixmodB['TV'],3)`|`r round(fixmodC['TV'],3)`|
+| | Sex | $\gamma_{20}$| | |`r round(fixed_modA['sex'],3)`|`r round(fixmodB1['sex'],3)`|`r round(fixmodB2['sex'],3)`|`r round(fixmodB['sex'],3)`|`r round(fixmodC['sex'],3)`|
+| | Black | $\gamma_{30}$| | |`r round(fixed_modA['as.factor(Race)Black'],3)`|`r round(fixmodB1['as.factor(Race)Black'],3)`|`r round(fixmodB2['as.factor(Race)Black'],3)`|`r round(fixmodB['as.factor(Race)Black'],3)`|`r round(fixmodC['as.factor(Race)Black'],3)`|
+| | Hispanic | $\gamma_{40}$| | |`r round(fixed_modA['as.factor(Race)Hispanic'],3)`|`r round(fixmodB1['as.factor(Race)Hispanic'],3)`|`r round(fixmodB2['as.factor(Race)Hispanic'],3)`|`r round(fixmodB['as.factor(Race)Hispanic'],3)`|`r round(fixmodC['as.factor(Race)Hispanic'],3)`|
+| | Native American | $\gamma_{50}$| | |`r round(fixed_modA['as.factor(Race)NativeAm'],3)`|`r round(fixmodB1['as.factor(Race)NativeAm'],3)`|`r round(fixmodB2['as.factor(Race)NativeAm'],3)`|`r round(fixmodB['as.factor(Race)NativeAm'],3)`|`r round(fixmodC['as.factor(Race)NativeAm'],3)`|
+| | White | $\gamma_{60}$| | |`r round(fixed_modA['as.factor(Race)White'],3)`|`r round(fixmodB1['as.factor(Race)White'],3)`|`r round(fixmodB2['as.factor(Race)White'],3)`|`r round(fixmodB['as.factor(Race)White'],3)`|`r round(fixmodC['as.factor(Race)White'],3)`|
+| | Welfare | $\gamma_{70}$| | |`r round(fixed_modA['Welfare'],3)`|`r round(fixmodB1['Welfare'],3)`|`r round(fixmodB2['Welfare'],3)`|`r round(fixmodB['Welfare'],3)`|`r round(fixmodC['Welfare'],3)`|
+| | Puberty | $\gamma_{80}$| | |`r round(fixed_modA['Puberty'],3)`|`r round(fixmodB1['Puberty'],3)`|`r round(fixmodB2['Puberty'],3)`|`r round(fixmodB['Puberty'],3)`|`r round(fixmodC['Puberty'],3)`|
+| | cAge x TV | $\gamma_{11}$| | | | `r round(fixmodB1['cAge:TV'],3)`|`r round(fixmodB2['cAge:TV'],3)`|`r round(fixmodB['cAge:TV'],3)`|
+| | cAge x Sex | $\gamma_{21}$| | | |`r round(fixmodB1['cAge:sex'],3)`|`r round(fixmodB2['cAge:sex'],3)`|`r round(fixmodB['cAge:sex'],3)`|`r round(fixmodC['cAge:sex'],3)`|
+| | cAge x Black | $\gamma_{31}$| | | | | |`r round(fixmodB['cAge:as.factor(Race)Black'],3)`| |
+| | cAge x Hispanic | $\gamma_{41}$| | | | | |`r round(fixmodB['cAge:as.factor(Race)Hispanic'],3)`| |
+| | cAge x Native American | $\gamma_{51}$| | | | | |`r round(fixmodB['cAge:as.factor(Race)NativeAm'],3)`| |
+| | cAge x White | $\gamma_{61}$| | | | | |`r round(fixmodB['cAge:as.factor(Race)White'],3)`| |
+| _Variance Components_ | | | | | | | | | |
+|Level 1| Within-Person| $\sigma_{\varepsilon}^2$|`r round(varmod_umm['Residual','Variance'],3)`|`r round(varmod_ugm['Residual','Variance'],3)`|`r round(varmodA['Residual','Variance'],3)`|`r round(varmodB1['Residual','Variance'],3)`|`r round(varmodB2['Residual','Variance'],3)`|`r round(varmodB['Residual','Variance'],3)`|`r round(varmodC['Residual','Variance'],3)`|
+|Level 2| Between-Group|$\sigma_{0}^2$|`r round(varmod_umm['(Intercept)','Variance'],3)`|`r round(varmod_ugm['(Intercept)','Variance'],3)`|`r round(varmodA['(Intercept)','Variance'],3)`|`r round(varmodB1['(Intercept)','Variance'],3)`|`r round(varmodB2['(Intercept)','Variance'],3)`|`r round(varmodB['(Intercept)','Variance'],3)`|`r round(varmodC['(Intercept)','Variance'],3)`|
+| | |$\sigma_{1}^2$| |`r round(varmod_ugm['cAge','Variance'],3)`|`r round(varmodA['cAge','Variance'],3)`|`r round(varmodB1['cAge','Variance'],3)`|`r round(varmodB2['cAge','Variance'],3)`|`r round(varmodB['cAge','Variance'],3)`|`r round(varmodC['cAge','Variance'],3)`|
+| | |$\sigma_{01}$| | `r round(varmod_ugm['cAge','Corr'],3)`|`r round(varmodA['cAge','Corr'],3)`|`r round(varmodB1['cAge','Corr'],3)`|`r round(varmodB2['cAge','Corr'],3)`|`r round(varmodB['cAge','Corr'],3)`|`r round(varmodC['cAge','Corr'],3)`|
+| _Goodness of Fit Statistics_ | | | | | | | | |
+| |AIC| | `r round(AIC(umm),5)`|`r round(AIC(ugm),5)`|`r round(AIC(mod_A),5)`|`r round(AIC(mod_B1),5)`|`r round(AIC(mod_B2),5)`|`r round(AIC(mod_B),5)`|`r round(AIC(mod_C),5)`|
+| |BIC| | `r round(BIC(umm),5)`|`r round(BIC(ugm),5)`|`r round(BIC(mod_A),5)`|`r round(BIC(mod_B1),5)`|`r round(BIC(mod_B2),5)`|`r round(BIC(mod_B),5)`|`r round(BIC(mod_C),5)`|
+
+( _Question 4C_) In the quantile-quantile plot of the standardized level 1 residuals, we do see significant deviations from normality at the extremes of the distribution (illustrated by curving tails), suggesting a potential violation of the assumption of normality.  This presents a potential concern that our data is not drawn from the theoretical normal distribution and, consequently, that there is variation in BMI at the extremes of the distribution that this model is not addressing.  These deviations from normality are evident in in different partitions of the data as well; both male and female respondents have extreme curvatures in the tails of the distribution.  This curvature is not quite as pronounced when the data is subdivided by Race, particular in Asian and Native American subgroups, but is evident in Black and Hispanic subgroups.  Based on plots of level-1 residuals by subject, there do not appear to be violations in the assumption of homoscedasticity as the bulk of the level-1 residuals seem to be located between -2 and +2 across subjects and there are not apparent banding or clustering patterns. 
+
+In terms of the Level-2 residuals, a standardized Q-Q plot reveals extreme concavity throughout the entire plot to the extent that each tail of the distribution is curved upward.  This is the case for estimates of both intercept and slope.  A plot of these residuals by subject ID also reveals that there are several outliers at the positive end of the distribution (standardized level 2 residuals ranging from 2.5 to 5), which calls into question the assumption of homoscedasticity.  The sum of these findings indicate that the model is not fully explaining the trends we see in the data.
+
+( _Questions 5A & 5B_) Findings from Model B-1 (formally expressed below) indicate that hours of TV watching is a statistically significant predictor of BMI value, such that a one hour increase in TV-watching per week translates to a roughly `r round(fixmodB1['TV'],3)` unit increase in BMI ($p<0.01$). It is important to recognize, however, that because this is a time-varying indicator that is not actually interacted with time in this model, its effect is really illustrating discontinuous change in an individual trajectory as a function of TV watching.  In Model B2, I include fixed effects for time spent watching television as well as the interaction between time and television-watching and finding that the interaction is statistically significant at the $p < 0.05$ level, but is qualitatively quite small (consistent with the results from Model B).  Ultimately, the effect of each additional hour of TV watching per week on the rate of change of BMI is approximately `r round(fixmodB2['cAge:TV'],3)`; this translates to a `r round(fixmodB2['cAge:TV'],3) + round(fixmodB['cAge'],3)` unit per year increase in BMI when all else is held equal.  Although BIC values slightly preference Model B1, I harken to Model B2 to address the research questions in the _Conclusion_ section because the interpretation of the interaction is slightly more straightforward given the context of the study.
+
+( _Question 5C_) The magnitudes of the fixed effects for TV watching in Model B1 and the fixed effects for the interaction between TV and Age are put brought into sharp focus when compared to the variance and covariance parameters of each of the relevant models.  For instance, the estimated variation in the population average of the starting BMI value ($\sigma_{0}^2$) is about `r round(varmodB1['(Intercept)','Variance'],3)` in both Models B1 and B2, which is substantially larger than the change in initial value that would result from an additional hour per week of television watching.  If we look specifically at Model B2, we see that the value of the average variability in the population rate of change in BMI ($\sigma_{1}^2$) is about `r round(varmodB1['cAge', 'Variance'],3)`, whereas the rate of change of BMI would only increase by about `r round(fixmodB2['cAge:TV'],3)` per extra hour of television per week.  Taken together, these results indicate that there is far more variability in both population averages of initial BMI values as well as the rate of change of BMI over time than TV watching is really helping to explain.  Added to this, there is a residual variability that amounts to approximate 5.80 units (according to either model), which is also a substantial amount of variability that can be attributed to within-individual differences, such as metabolic characteristics, genetics, and other factors that will be explored later in this piece.   
+
+**Considering Other Behavioral Characteristics**
+
+( _Question 6_) Other factors that I examine in order to gauge the net effects of TV watching on BMI include diet as measured by the number of times the youth had consumed fast food in the previous week, total amount of sleep obtained per night, and the time that the individual went to sleep.  When added to Model B1 (and Model B2 to be thorough), I find no evidence to suggest that any of the other behavior measures contributes to the changes in the initial population average of BMI at the $p<0.05$ level.  Nor is there evidence to suggest that the inclusion these measures changes the interpretation of the changes in population intercept per hour of television watched; in the last column in _Table 1_, there is little change evident in the size of fixed effects for TV watching.  As evidenced in _Table 1_, actually increases both AIC and BIC values compared to Models B1 and B2, indicating that there is an increase in complexity without a concommitant increase in explanatory power.  Interestingly, however, I go on to test interactions between fast food consumption and age, total sleep time and age, and bedtime and age in a separate model (Model D, included in supplementary materials) and I find that, while there is still little change to the effect size on TV watching, there is a statistically significant association between fast food consumption and age ($p<0.01$).  This is a rather intuitive finding, considering that metabolisms tend to slow as individuals get older.  Neither the total sleep time interaction variable nor the bedtime interaction variable are statistically significant at the $p<0.05$ level.
+
+**Putting It All Together**
+
+One of the major challenges of working with this type of model is that it is often complex to understand substantively how all of the explanatory factors work together to influence outcomes. One of the clearest way of interpreting these findings is through the equations derived for various subgroups.  For instance, in Model B1, the equation that obtains is as follows (welfare status is excluded from the model due to lack of statistical significance in any model).
+
+$$
+\begin{aligned}
+BMI_{ij}= 19.63 + 0.011(TV_{ij}) + 0.483(cAge_{ij}) - 0.496(Sex_{i}) + 0.045(Sex_{i})(cAge_{ij})+ 2.178(Black_{i}) + 1.486(Hispanic_{i}) +\\ 2.851(NativeAmerican_{i}) + 1.136(White_{i}) - 0.327(Puberty_{ij})
+\end{aligned}
+$$
+
+Thus, for Asian males at age 11 who are not going through puberty, the average population value of BMI is 19.63 units, whereas Asian females of the same set of characteristics have an average population BMI of 19.134.  The equation relating TV use to BMI for these individuals would then be $BMI_{ij}= 19.63 + 0.011(TV_{ij})$, such that each additional hour of TV per week watched would yield an additional 0.011 units on the BMI scale.  
+
+The following figures attempt to further illustrate this set of interrelationships by highlighting the prototypical trends for African American individuals in the dataset (values for Welfare are held at zero and this sample is assumed to be undergoing puberty). The first graph is modeled using Model B1 (no TV/age interaction) and the second uses Model B2 (features TV/age interaction). Per the equations above, males have larger starting values of BMI, but also an overall lower rate of change of BMI.  As TV watching hours increase, so too does the intercept of the graph. This implies that if an individual were to shift their TV watching habits from 40 hours per week to 10 hours per week, they would see a marked downward shift in intercept and this would appear graphically as a step function.  In the second graph, we observe that the average values of BMI is the same, but groups with different TV watching habits start to diverge as time passes.  Higher TV watching during the week generates a higher growth rate of BMI. 
+
+```{r, echo=F, warning=F, message=F}
+#plotting prototypical trends by generating a hypothetical dataset and subjecting it to Model B1
+time_values <- unique(xd$cAge)
+tv_values <- unique(xd$TV)
+race_values <- unique(xd$Race)
+sex_values <- unique(xd$sex)
+welfare_val <- unique(xd$Welfare)
+pub_val <- unique(xd$Puberty)
+
+model_xd <- expand.grid(cAge = time_values, TV = tv_values, Race = race_values, sex = sex_values, Welfare = welfare_val, Puberty = pub_val)
+model_xd <- model_xd %>%
+    mutate(pred_BMI1=predict(mod_B1,
+                            newdata=.,
+                            level=0))
+
+model_xd1 <- model_xd %>%
+  filter(Puberty==1 & Welfare==0 & Race=="Black") %>%
+  filter(TV==5 | TV==10| TV==20 | TV==40)%>%
+  mutate(Gender=ifelse(sex==1,"Female","Male"))
+
+ggplot(data=model_xd1, aes(x=cAge, y=pred_BMI1, color=as.factor(TV)), group=as.factor(TV)) +
+  geom_line()+
+    ggtitle("Fitted mean trajectories for African American Adolescents\nby Levels of TV Watching (Model B1)") +
+    xlab("Centered Age") +
+    ylab("Average BMI") +
+  facet_grid(~Gender) + 
+  guides(color=guide_legend(title="Hours of TV\nper Week"))
+
+#using model B2
+model_xd2 <- expand.grid(cAge = time_values, TV = tv_values, Race = race_values, sex = sex_values, Welfare = welfare_val, Puberty = pub_val)
+model_xd2 <- model_xd2 %>%
+    mutate(pred_BMI1=predict(mod_B2,
+                            newdata=.,
+                            level=0))
+
+model_xd2 <- model_xd2 %>%
+  filter(Puberty==1 & Welfare==0 & Race=="Black") %>%
+  filter(TV==5 | TV==10| TV==20 | TV==40)%>%
+  mutate(Gender=ifelse(sex==1,"Female","Male"))
+
+ggplot(data=model_xd2, aes(x=cAge, y=pred_BMI1, color=as.factor(TV)), group=as.factor(TV)) +
+  geom_line()+
+    ggtitle("Fitted mean trajectories for African American Adolescents\nby Levels of TV Watching (Model B2)") +
+    xlab("Centered Age") +
+    ylab("Average BMI") +
+  facet_grid(~Gender) + 
+  guides(color=guide_legend(title="Hours of TV\nper Week"))
+```
+
+Finally, the following plots illustrate the different predicted trajectories predicted by OLS estimates that individuals can take based on their specific covariate values (black line) and compares those values to the BMI trajectories predicted by Model B1.  As individual TV watching behavior changes from wave to wave, these young folks get placed on a slightly different trajectory. In Model B1, this appears as a discontinuity in the intercept between measurement occasians, but in Model B2 (wherein the effect of TV watching contributes to a change in population average rate of change in BMI), this would manifest as an change in the slope between measurement occasions.  In general, the OLS trends and predicted population trends track rather closely, but there are also clear violations in which the trends are completely diverging.  This may be reflecting the same concern registered in _Question 4C_ that the model is clearly not explaining fully what we observe in the data. 
+
+```{r, warning=F, echo=F, error=F, message=F}
+xd_resid <- xd %>%
+  mutate(l1_resid = resid(mod_B1, level=1),
+         l1_resid_std = l1_resid/sd(l1_resid))
+
+xd_resid_2 <- xd %>%
+ distinct(ID) %>%
+  mutate(rand_int = ranef(mod_B1)[,"(Intercept)"],
+           rand_slope = ranef(mod_B1)[,"cAge"],
+           rand_int_std = rand_int/sd(rand_int),
+           rand_slope_std = rand_slope/sd(rand_slope))
+
+xd_resid_2_long <- xd_resid_2 %>%
+    gather(key=Effect, value=estimate_std, rand_int_std, rand_slope_std) %>%
+    mutate(Effect=ifelse(Effect=="rand_int_std","Intercept","Slope"))
+
+xd_all_lines <- xd_resid %>%
+    mutate(pop=predict(mod_B1, newdata=., level=0),
+           EB=predict(mod_B1, newdata=., level=1))
+
+set.seed(4848)
+sample <- sample(unique(xd$ID), size=8, replace=F)
+
+ggplot(data=xd_all_lines %>% filter(ID %in% sample),
+       aes(x=Age, y=BMI, group=ID, color=quartile)) +
+    geom_point() +
+    scale_x_continuous(breaks=0:2) +
+    geom_line(aes(color="OLS"), stat="smooth", method="lm", color='black') +
+    geom_line(aes(y=pop)) +
+    facet_wrap( ~ ID, ncol=2) +
+    theme_bw() +
+    xlab("Age") +
+    ylab("BMI") +
+    ggtitle("Comparison of trend estimates for each subject") +
+  ylim(18,55)
+```
+
+## Conclusion 
+
+This research set out to answer two major questions: (1) How, if at all, does the time that young adults spend watching television affect their changes in body mass index over time, controlling for known personal characteristics?  And (2), are these effects robust even controlling for other behavioral risk factors like low sleep time, late bedtime, and fast food consumption?  This analysis provides some evidence to suggest that the amount of time that young adults and adolescents spend watching television does affect their body mass index over time, and that these results hold up even when other behaviors are taken into account.  Even though these results are statistically significant across a multitude of models, it is important to recognize that they are not exactly the most potent force driving differences among groups in terms of BMI. The magnitude of the effect of TV watching hours on BMI pales in comparison to the BMI scale itself, which ranges from about 19 units to 50 units (theoretically it goes on, but there are physical limitations to the human surface area-to-volume ratio that render larger values unlikely).  It would take tremendous amounts of additional TV watching per week over the years to yield large changes in BMI. Perhaps these changes in behavior are not outside of the realm of feasibility, but they would require an individual to fundamentally change their lifestyle.  In contrast, we see more powerful effects driving differences between groups such as Race and Sex.
+   
+That none of the alternative behavioral variables were significant was quite a surprise, given what is currently understood in the research about sleep deprivation and cortisol release and how it might contribute to the development of obesity over time in adolescents.  It is worth recalling back, however, to the fact that when each of these variables was interacted with centered age, that the fast food consumption/time interaction was statistically significant.  Thus, these results would indicate that the relationship between dietary habits and BMI is not quite as straightforward as we might believe.  These findings point to the fact that metabolic changes over time may be more to blame for BMI increases than simply ingesting fast food at any one point in time.
+
+Some of the limitations of this work derive from the nature of the data. There are three or fewer waves of data for each adolescent in the dataset, which is particularly limiting in a multilevel model because it limits the number of random effects that we can model.  The number of waves as well as the time between waves are also limiting in that there may be a multitude of intervening factors over the timespan between measurements that affect bodily development.  Additionally, there are strong concerns to be raised surrounding the construct validity of the primary explanatory variable.  Hypothetically, TV watching is a proxy for the overall level of sedentary behavior an individual exhibits (there is not, to my knowledge, a theory that connects the actual process of watching TV to the accumulation of mass other than the fact that the person tends to be immobile throughout the process), but it fails to exclude the fact that an individual could be conducting other activities while watching TV or simply have the TV on in the background.  Even if TV watching hours prove to be an accurate proxy for sedentary behaviors, we are also missing variables that could help inform our notion of how active the individual is.  For instance, a person may spend a total of 20 hours per week watching television, but might also be high school athlete during their adolescence or have a high-paced job during their adult years.  Omitted variable bias is a major concern here.  
+
+Ultimately, multilevel modeling stands to improve our understanding of the antecedents of obesity.  Further work should seek to determine whether or not a linear model is the most appropriate functional form for this relationship as well as to better understand what is driving the outlying values of BMI.  
+
+## References
+
+Levine, S., & Stein, R. (2013). The Health Risks of Childhood Obesity. In J. Langwith (Ed.), Perspectives on Diseases and Disorders. Childhood Obesity (pp. 33-39). Detroit: Greenhaven Press. Retrieved from 
+http://link.galegroup.com.offcampus.lib.washington.edu/apps/doc/CX2073600010/GVRL?u=wash_main&sid=GVRL&xid=dc1b818b
+
+Ogden CL, Carroll MD, Fryar CD, Flegal KM. (2015). Prevalence of obesity among adults and youth: United States, 2011–2014. NCHS data brief, no 219. Hyattsville, MD: National Center for Health Statistics. 2015.
+
+Pan L, Freedman DS, Sharma AJ, et al. Trends in Obesity Among Participants Aged 2–4 Years in the Special Supplemental Nutrition Program for Women, Infants, and Children — United States, 2000–2014. MMWR Morb Mortal Wkly Rep 2016;65:1256–1260. DOI: http://dx.doi.org/10.15585/mmwr.mm6545a2.
+
+Chandrasekaran, S., & Neal-Perry, G. (2017). Long-term consequences of obesity on female fertility and the health of the offspring. Current Opinion in Obstetrics & Gynecology, 29(3), 180-187.
+
+</div>
